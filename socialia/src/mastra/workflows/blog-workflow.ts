@@ -82,22 +82,22 @@ const generateSummary = createStep({
 
       Structure your response as follows:
 
-      📖 TITLE: [Post Title]
-      ✍️ AUTHOR: [Author Name]
+       TITLE: [Post Title]
+       AUTHOR: [Author Name]
       ═══════════════════════════
 
-      💡 CORE THESIS
+       CORE THESIS
       [One sentence describing the main goal of the post]
 
-      🛠️ KEY TECHNICAL TAKEAWAYS
+       KEY TECHNICAL TAKEAWAYS
       • [Point 1] - [Brief explanation]
       • [Point 2] - [Brief explanation]
       • [Point 3] - [Brief explanation]
 
-      📝 SUMMARY
+       SUMMARY
       [A 2-3 paragraph concise summary of the article]
 
-      🔗 ORIGINAL POST: ${inputData.url}
+       ORIGINAL POST: ${inputData.url}
     `;
 
     const response = await agent.generate(prompt);
