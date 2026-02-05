@@ -17,17 +17,9 @@ interface HashnodeResponse {
 
 export const blogSummaryTool = createTool({
   id: "get-hashnode-summary",
-  description:
-    "Fetches a Hashnode blog post and provides content for summarization",
+  description: "Fetches a Hashnode blog post content using its URL",
   inputSchema: z.object({
-    postSlug: z
-      .string()
-      .describe(
-        "The slug of the Hashnode post (the part of the URL after the domain)",
-      ),
-    hostname: z
-      .string()
-      .describe("The blog domain (e.g., engineering.hashnode.com)"),
+    url: z.string().describe("The full Hashnode blog post URL"),
   }),
   outputSchema: z.object({
     title: z.string(),
@@ -35,56 +27,68 @@ export const blogSummaryTool = createTool({
     content: z.string(),
     summaryStatus: z.string(),
   }),
-  execute: async ({ postSlug, hostname }) => {
-    return await fetchAndProcessBlog(postSlug, hostname);
-  },
-});
+  execute: async ({ url }) => {
+    try {
+      const parsedUrl = new URL(url);
+      let host = parsedUrl.hostname;
 
-const fetchAndProcessBlog = async (slug: string, hostname: string) => {
-  const cleanHostname = hostname.replace(/^(https?:\/\/)/, "").split("/")[0];
 
-  const query = `
-    query Post($slug: String!, $hostname: String!) {
-      publication(host: $hostname) {
-        post(slug: $slug) {
-          title
-          author {
-            name
-          }
-          content {
-            markdown
+      if (host === 'hashnode.com' && parsedUrl.pathname.startsWith('/blog')) {
+        host = 'hashnode.com/blog';
+      }
+
+ 
+      const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
+      const slug = pathParts[pathParts.length - 1];
+
+      const query = `
+        query GetPost($host: String!, $slug: String!) {
+          publication(host: $host) {
+            post(slug: $slug) {
+              title
+              author { name }
+              content { markdown }
+            }
           }
         }
+      `;
+
+      const response = await fetch("https://gql.hashnode.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query,
+          variables: { host, slug },
+        }),
+      });
+
+      const result = await response.json();
+
+
+      const post = result.data?.publication?.post;
+
+      if (!post) {
+        return {
+          title: "Not Found",
+          author: "N/A",
+          content: "",
+          summaryStatus: `Error: Post not found. Tried host: "${host}" and slug: "${slug}".`,
+        };
       }
+
+      return {
+        title: post.title,
+        author: post.author.name,
+        content: post.content.markdown,
+        summaryStatus: "Success",
+      };
+    } catch (error) {
+      return {
+        title: "Error",
+        author: "N/A",
+        content: "",
+        summaryStatus: `Failed to parse URL or connect to API: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
     }
-  `;
-
-  try {
-    const response = await fetch("https://gql.hashnode.com", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        variables: { slug: slug.trim, hostname: cleanHostname },
-      }),
-    });
-
-    const json = (await response.json()) as any;
-    const post = json.data?.publication?.post;
-
-    if (!post) {
-      throw new Error(`Could not find post with slug: ${slug} on ${hostname}`);
-    }
-
-    return {
-      title: post.title,
-      author: post.author.name,
-      content: post.content.markdown.substring(0, 5000), // Truncate for LLM context limits if necessary
-      summaryStatus: "Success: Content retrieved for summarization",
-    };
-  } catch (error) {
-    throw new Error(`API Connection failed: ${error}`);
-  }
-};
+  },
+});

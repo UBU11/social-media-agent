@@ -21,7 +21,7 @@ export const accuracyScorer = createScorer({
     "Evaluates if the summary is factually consistent with the retrieved Hashnode blog content",
   type: "agent",
   judge: {
-    model: "groq/llama-3.3-70b-versatile",
+    model: "groq/openai/gpt-oss-20b",
     instructions:
       "You are an expert editor. Compare a blog post summary against the original content. " +
       "Check for factual errors, hallucinations, or claims not supported by the source text. " +
@@ -79,7 +79,7 @@ export const summarizationScorer = createScorer({
     "Evaluates if the summary captures the main thesis and technical value of the post.",
   type: "agent",
   judge: {
-    model: "groq/llama-3.3-70b-versatile",
+    model: "groq/openai/gpt-oss-20b",
     instructions:
       "You are a technical content strategist. Your goal is to determine if a summary captures " +
       'the "Core Thesis" and "Key Technical Takeaways" of an article. A good summary explains ' +
@@ -136,7 +136,7 @@ export const concisenessScorer = createScorer({
   description: "Evaluates the brevity and information density of the summary.",
   type: "agent",
   judge: {
-    model: "groq/llama-3.3-70b-versatile",
+    model: "groq/openai/gpt-oss-20b",
     instructions:
       "You are a minimalist editor. You value information density. " +
       "Check if the summary uses unnecessary filler words, repetitive phrasing, " +

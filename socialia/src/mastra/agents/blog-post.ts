@@ -19,7 +19,7 @@ export const blogAgent = new Agent({
 
       Use the blogSummaryTool to fetch the markdown content of the post.
 `,
-  model: 'groq/llama-3.3-70b-versatile',
+  model: 'groq/openai/gpt-oss-20b',
   tools: { blogSummaryTool },
   scorers: {
 
