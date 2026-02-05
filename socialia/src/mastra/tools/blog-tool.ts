@@ -1,5 +1,5 @@
-import { createTool } from '@mastra/core/tools';
-import { z } from 'zod';
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
 
 interface HashnodeResponse {
   data: {
@@ -16,11 +16,18 @@ interface HashnodeResponse {
 }
 
 export const blogSummaryTool = createTool({
-  id: 'get-hashnode-summary',
-  description: 'Fetches a Hashnode blog post and provides content for summarization',
+  id: "get-hashnode-summary",
+  description:
+    "Fetches a Hashnode blog post and provides content for summarization",
   inputSchema: z.object({
-    postSlug: z.string().describe('The slug of the Hashnode post (the part of the URL after the domain)'),
-    hostname: z.string().describe('The blog domain (e.g., engineering.hashnode.com)'),
+    postSlug: z
+      .string()
+      .describe(
+        "The slug of the Hashnode post (the part of the URL after the domain)",
+      ),
+    hostname: z
+      .string()
+      .describe("The blog domain (e.g., engineering.hashnode.com)"),
   }),
   outputSchema: z.object({
     title: z.string(),
@@ -34,6 +41,8 @@ export const blogSummaryTool = createTool({
 });
 
 const fetchAndProcessBlog = async (slug: string, hostname: string) => {
+  const cleanHostname = hostname.replace(/^(https?:\/\/)/, "").split("/")[0];
+
   const query = `
     query Post($slug: String!, $hostname: String!) {
       publication(host: $hostname) {
@@ -50,28 +59,32 @@ const fetchAndProcessBlog = async (slug: string, hostname: string) => {
     }
   `;
 
-  const response = await fetch('https://gql.hashnode.com', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      query,
-      variables: { slug, hostname },
-    }),
-  });
+  try {
+    const response = await fetch("https://gql.hashnode.com", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        variables: { slug: slug.trim, hostname: cleanHostname },
+      }),
+    });
 
-  const json = (await response.json()) as any;
-  const post = json.data?.publication?.post;
+    const json = (await response.json()) as any;
+    const post = json.data?.publication?.post;
 
-  if (!post) {
-    throw new Error(`Could not find post with slug: ${slug} on ${hostname}`);
+    if (!post) {
+      throw new Error(`Could not find post with slug: ${slug} on ${hostname}`);
+    }
+
+    return {
+      title: post.title,
+      author: post.author.name,
+      content: post.content.markdown.substring(0, 5000), // Truncate for LLM context limits if necessary
+      summaryStatus: "Success: Content retrieved for summarization",
+    };
+  } catch (error) {
+    throw new Error(`API Connection failed: ${error}`);
   }
-
-  return {
-    title: post.title,
-    author: post.author.name,
-    content: post.content.markdown.substring(0, 5000), // Truncate for LLM context limits if necessary
-    summaryStatus: 'Success: Content retrieved for summarization',
-  };
 };
